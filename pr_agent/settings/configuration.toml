@@ -56,6 +56,7 @@ enable_help_text=true
 ## changes walkthrough section
 enable_semantic_files_types=true
 collapsible_file_list='adaptive' # true, false, 'adaptive'
+inline_file_summary=false # false, true, 'table'
 # markers
 use_description_markers=false
 include_generated_by_header=true
@@ -72,6 +73,7 @@ summarize = false
 include_improved_code = true
 extra_instructions = ""
 rank_suggestions = false
+enable_help_text=true
 # params for '/improve --extended' mode
 auto_extended_mode=false
 num_code_suggestions_per_chunk=8
@@ -96,6 +98,8 @@ extra_instructions = ""
 deployment_type = "user"
 ratelimit_retries = 5
 base_url = "https://api.github.com"
+publish_inline_comments_fallback_with_verification = true
+try_fix_invalid_inline_comments = true
 
 [github_action]
 # auto_review = true    # set as env var in .github/workflows/pr-agent.yaml
@@ -114,7 +118,8 @@ duplicate_requests_cache_ttl = 60  # in seconds
 handle_pr_actions = ['opened', 'reopened', 'ready_for_review', 'review_requested']
 pr_commands = [
     "/describe --pr_description.add_original_user_description=true --pr_description.keep_original_user_title=true",
-    "/review",
+    "/review --pr_reviewer.num_code_suggestions=0",
+    "/improve --pr_code_suggestions.summarize=true",
 ]
 # settings for "pull_request" event with "synchronize" action - used to detect and handle push triggers for new commits
 handle_push_trigger = false

@@ -19,6 +19,39 @@ Making pull requests less painful with an AI agent
     <img alt="GitHub" src="https://img.shields.io/github/last-commit/Codium-ai/pr-agent/main?style=for-the-badge" height="20">
     </a>
 </div>
+
+## Table of Contents
+- [News and Updates](#news-and-updates)
+- [Overview](#overview)
+- [Example results](#example-results)
+- [Features overview](#features-overview)
+- [Try it now](#try-it-now)
+- [Installation](#installation)
+- [PR-Agent Pro 💎](#pr-agent-pro-)
+- [How it works](#how-it-works)
+- [Why use PR-Agent?](#why-use-pr-agent)
+  
+## News and Updates
+### Jan 21, 2024
+- 💎 Custom suggestions - A new tool, `/custom_suggestions`, was added to PR-Agent Pro. The tool will propose only suggestions that follow specific guidelines defined by the user. 
+See [here](https://github.com/Codium-ai/pr-agent/blob/main/docs/CUSTOM_SUGGESTIONS.md) for more details.
+
+### Jan 17, 2024
+- 💎 Inline file summary - The `describe` tool has a new option, `--pr_description.inline_file_summary`, which allows adding a summary of each file change to the Diffview page. See [here](https://github.com/Codium-ai/pr-agent/blob/main/docs/DESCRIBE.md#inline-file-summary-)
+- The `improve` tool now can present suggestions in a nice collapsible format, which significantly reduces the PR footprint. See [here](https://github.com/Codium-ai/pr-agent/blob/main/docs/IMPROVE.md#summarized-vs-commitable-code-suggestions) for more details. 
+- To accompany the improved interface of the  `improve` tool, we change the [default automation settings](https://github.com/Codium-ai/pr-agent/blob/main/pr_agent/settings/configuration.toml#L116) of our GithupApp to:
+```
+pr_commands = [
+    "/describe --pr_description.add_original_user_description=true --pr_description.keep_original_user_title=true",
+    "/review --pr_reviewer.num_code_suggestions=0",
+    "/improve --pr_code_suggestions.summarize=true",
+]
+```
+Meaning that by default, for each PR the `describe`, `review`, and `improve` tools will be triggered automatically, and the `improve` tool will present the suggestions in a single comment.  
+You can of course overwrite these defaults by adding a `.pr_agent.toml` file to your repo. See [here](https://github.com/Codium-ai/pr-agent/blob/main/Usage.md#working-with-github-app).
+
+
+## Overview
 <div style="text-align:left;">
 
 CodiumAI PR-Agent is an open-source tool to help efficiently review and handle pull requests. It automatically analyzes the pull request and can provide several types of commands:
@@ -40,6 +73,8 @@ CodiumAI PR-Agent is an open-source tool to help efficiently review and handle p
 ‣ **Generate Custom Labels 💎 ([`/generate_labels`](./docs/GENERATE_CUSTOM_LABELS.md))**: Automatically suggests custom labels based on the PR code changes.
 \
 ‣ **Analyze 💎 ([`/analyze`](./docs/Analyze.md))**: Automatically analyzes the PR, and presents changes walkthrough for each component.
+\
+‣ **Custom Suggestions 💎 ([`/custom_suggestions`](./docs/CUSTOM_SUGGESTIONS.md))**: Automatically generates custom suggestions for improving the PR code, based on specific guidelines defined by the user.
 
 
 See the [Installation Guide](./INSTALL.md) for instructions on installing and running the tool on different git platforms.
@@ -48,21 +83,13 @@ See the [Usage Guide](./Usage.md) for running the PR-Agent commands via differen
 
 See the [Tools Guide](./docs/TOOLS_GUIDE.md) for a detailed description of the different tools (tools are run via the commands).
 
-## Table of Contents
-- [Example results](#example-results)
-- [Features overview](#features-overview)
-- [Try it now](#try-it-now)
-- [Installation](#installation)
-- [PR-Agent Pro 💎](#pr-agent-pro-)
-- [How it works](#how-it-works)
-- [Why use PR-Agent?](#why-use-pr-agent)
 
 ## Example results
 </div>
 <h4><a href="https://github.com/Codium-ai/pr-agent/pull/530">/describe</a></h4>
 <div align="center">
 <p float="center">
-<img src="https://www.codium.ai/images/pr_agent/describe_short_main.png" width="800">
+<img src="https://www.codium.ai/images/pr_agent/describe_new_short_main.png" width="800">
 </p>
 </div>
 <hr>
@@ -134,8 +161,10 @@ See the [Tools Guide](./docs/TOOLS_GUIDE.md) for a detailed description of the d
 |       | ⮑ [SOC2 Compliance](https://github.com/Codium-ai/pr-agent/blob/main/docs/REVIEW.md#soc2-ticket-compliance-) 💎                       |   :white_check_mark:    |   :white_check_mark:    |   :white_check_mark:        |
 |       | Ask                                         |   :white_check_mark:    |   :white_check_mark:    |   :white_check_mark:        |
 |       | Describe                                    |   :white_check_mark:    |   :white_check_mark:    |   :white_check_mark:        |
+|       | ⮑ [Inline file summary](https://github.com/Codium-ai/pr-agent/blob/main/docs/DESCRIBE.md#inline-file-summary-) 💎                       |   :white_check_mark:    |   :white_check_mark:    |   :white_check_mark:        |
 |       | Improve                                     |   :white_check_mark:    |   :white_check_mark:    |   :white_check_mark:        |
 |       | ⮑ Extended                                 |   :white_check_mark:    |   :white_check_mark:    |   :white_check_mark:        |
+|       | [Custom Suggestions](https://github.com/Codium-ai/pr-agent/blob/main/docs/CUSTOM_SUGGESTIONS.md) 💎        |   :white_check_mark:    |   :white_check_mark:    |   :white_check_mark:        |
 |       | Reflect and Review                          |   :white_check_mark:    |   :white_check_mark:    |   :white_check_mark:        |
 |       | Update CHANGELOG.md                         |   :white_check_mark:    |   :white_check_mark:    |   :white_check_mark:        |
 |       | Find Similar Issue                          |   :white_check_mark:    |                         |                             |
