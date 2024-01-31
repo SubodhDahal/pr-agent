@@ -190,7 +190,8 @@ class PRCodeSuggestions:
             original_initial_line = None
             for file in self.diff_files:
                 if file.filename.strip() == relevant_file:
-                    original_initial_line = file.head_file.splitlines()[relevant_lines_start - 1]
+                    if file.head_file:  # in bitbucket, head_file is empty. toDo: fix this
+                        original_initial_line = file.head_file.splitlines()[relevant_lines_start - 1]
                     break
             if original_initial_line:
                 suggested_initial_line = new_code_snippet.splitlines()[0]
@@ -225,7 +226,7 @@ class PRCodeSuggestions:
         for i, patches_diff in enumerate(patches_diff_list):
             get_logger().info(f"Processing chunk {i + 1} of {len(patches_diff_list)}")
             self.patches_diff = patches_diff
-            prediction = await self._get_prediction(model)
+            prediction = await self._get_prediction(model) # toDo: parallelize
             prediction_list.append(prediction)
         self.prediction_list = prediction_list
 
@@ -252,9 +253,14 @@ class PRCodeSuggestions:
         """
 
         suggestion_list = []
+        if not data:
+            return suggestion_list
         for suggestion in data:
             suggestion_list.append(suggestion)
         data_sorted = [[]] * len(suggestion_list)
+
+        if len(suggestion_list ) == 1:
+            return suggestion_list
 
         try:
             suggestion_str = ""

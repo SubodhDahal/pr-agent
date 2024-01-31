@@ -1,5 +1,5 @@
 [config]
-model="gpt-4" # "gpt-4-1106-preview"
+model="gpt-4" # "gpt-4-0125-preview"
 fallback_models=["gpt-3.5-turbo-16k"]
 git_provider="github"
 publish_output=true
@@ -47,7 +47,7 @@ enable_help_text=true # Determines whether to include help text in the PR review
 publish_labels=true
 publish_description_as_comment=false
 add_original_user_description=true
-keep_original_user_title=false
+keep_original_user_title=true
 use_bullet_points=true
 extra_instructions = ""
 enable_pr_type=true
@@ -90,6 +90,15 @@ extra_instructions = ""
 
 [pr_analyze] # /analyze #
 
+[pr_test] # /test #
+extra_instructions = ""
+testing_framework = "" # specify the testing framework you want to use
+num_tests=3            # number of tests to generate. max 5.
+avoid_mocks=true       # if true, the generated tests will prefer to use real objects instead of mocks
+file = ""              # in case there are several components with the same name, you can specify the relevant file
+class_name = ""        # in case there are several methods with the same name in the same file, you can specify the relevant class name
+enable_help_text=true
+
 [pr_config] # /config #
 
 [github]
@@ -100,7 +109,7 @@ base_url = "https://api.github.com"
 publish_inline_comments_fallback_with_verification = true
 try_fix_invalid_inline_comments = true
 
-[github_action]
+[github_action_config]
 # auto_review = true    # set as env var in .github/workflows/pr-agent.yaml
 # auto_describe = true  # set as env var in .github/workflows/pr-agent.yaml
 # auto_improve = true   # set as env var in .github/workflows/pr-agent.yaml
