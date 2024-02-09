@@ -6,10 +6,11 @@ import requests
 from atlassian.bitbucket import Cloud
 from starlette_context import context
 
-from ..algo.pr_processing import find_line_number_of_relevant_line_in_file
+from pr_agent.algo.types import FilePatchInfo, EDIT_TYPE
+from ..algo.utils import find_line_number_of_relevant_line_in_file
 from ..config_loader import get_settings
 from ..log import get_logger
-from .git_provider import FilePatchInfo, GitProvider, EDIT_TYPE
+from .git_provider import GitProvider
 
 
 class BitbucketProvider(GitProvider):
@@ -239,8 +240,8 @@ class BitbucketProvider(GitProvider):
 
     def generate_link_to_relevant_line_number(self, suggestion) -> str:
         try:
-            relevant_file = suggestion['relevant file'].strip('`').strip("'")
-            relevant_line_str = suggestion['relevant line']
+            relevant_file = suggestion['relevant_file'].strip('`').strip("'").rstrip()
+            relevant_line_str = suggestion['relevant_line'].rstrip()
             if not relevant_line_str:
                 return ""
 

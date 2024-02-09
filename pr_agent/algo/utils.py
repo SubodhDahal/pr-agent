@@ -5,7 +5,8 @@ import json
 import re
 import textwrap
 from datetime import datetime
-from typing import Any, List
+from enum import Enum
+from typing import Any, List, Tuple
 
 import yaml
 from starlette_context import context
@@ -13,8 +14,12 @@ from starlette_context import context
 from pr_agent.algo import MAX_TOKENS
 from pr_agent.algo.token_handler import get_token_encoder
 from pr_agent.config_loader import get_settings, global_settings
+from pr_agent.algo.types import FilePatchInfo
 from pr_agent.log import get_logger
 
+class ModelType(str, Enum):
+    REGULAR = "regular"
+    TURBO = "turbo"
 
 def get_setting(key: str) -> Any:
     try:
@@ -31,86 +36,77 @@ def convert_to_markdown(output_data: dict, gfm_supported: bool=True) -> str:
     Returns:
         str: The markdown formatted text generated from the input dictionary.
     """    
-    markdown_text = ""
 
     emojis = {
-        "Main theme": "🎯",
-        "PR summary": "📝",
-        "Type of PR": "📌",
+        "Possible issues": "🔍",
         "Score": "🏅",
-        "Relevant tests added": "🧪",
-        "Unrelated changes": "⚠️",
+        "Relevant tests": "🧪",
         "Focused PR": "✨",
         "Security concerns": "🔒",
-        "General suggestions": "💡",
         "Insights from user's answers": "📝",
         "Code feedback": "🤖",
         "Estimated effort to review [1-5]": "⏱️",
     }
+    markdown_text = ""
+    markdown_text += f"## PR Review\n\n"
+    markdown_text += "<table>\n<tr>\n"
+    markdown_text += """<td> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>PR&nbsp;feedback</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </td> <td></td></tr>"""
 
-    for key, value in output_data.items():
+    if not output_data or not output_data.get('review', {}):
+        return ""
+
+    for key, value in output_data['review'].items():
         if value is None or value == '' or value == {} or value == []:
             continue
-        if isinstance(value, dict):
-            markdown_text += f"## {key}\n\n"
-            markdown_text += convert_to_markdown(value, gfm_supported)
-        elif isinstance(value, list):
-            emoji = emojis.get(key, "")
-            if key.lower() == 'code feedback':
-                if gfm_supported:
-                    markdown_text += f"\n\n"
-                    markdown_text += f"<details><summary> <strong>{ emoji } Code feedback:</strong></summary>"
-                else:
-                    markdown_text += f"\n\n**{emoji} Code feedback:**\n\n"
-            else:
-                markdown_text += f"- {emoji} **{key}:**\n\n"
-            for i, item in enumerate(value):
-                if isinstance(item, dict) and key.lower() == 'code feedback':
-                    markdown_text += parse_code_suggestion(item, i, gfm_supported)
-                elif item:
-                    markdown_text += f"  - {item}\n"
-            if key.lower() == 'code feedback':
-                if gfm_supported:
-                    markdown_text += "</details>\n\n"
-                else:
-                    markdown_text += "\n\n"
-        elif value != 'n/a':
-            emoji = emojis.get(key, "")
-            if key.lower() == 'general suggestions':
-                if gfm_supported:
-                    markdown_text += f"\n\n<strong>{emoji} General suggestions:</strong> {value}\n"
-                else:
-                    markdown_text += f"{emoji} **General suggestions:** {value}\n"
-            else:
-                markdown_text += f"- {emoji} **{key}:** {value}\n"
+        key_nice = key.replace('_', ' ').capitalize()
+        emoji = emojis.get(key_nice, "")
+        markdown_text += f"<tr><td> {emoji} {key_nice}</td><td>\n\n{value}\n\n</td></tr>\n"
+    markdown_text += "</table>\n"
+
+    if 'code_feedback' in output_data:
+        if gfm_supported:
+            markdown_text += f"\n\n"
+            markdown_text += f"<details><summary> <strong>Code feedback:</strong></summary>\n\n"
+        else:
+            markdown_text += f"\n\n** Code feedback:**\n\n"
+        markdown_text += "<hr>"
+        for i, value in enumerate(output_data['code_feedback']):
+            if value is None or value == '' or value == {} or value == []:
+                continue
+            markdown_text += parse_code_suggestion(value, i, gfm_supported)+"\n\n"
+        if markdown_text.endswith('<hr>'):
+            markdown_text = markdown_text[:-4]
+        if gfm_supported:
+            markdown_text += f"</details>"
+    #print(markdown_text)
+
+
     return markdown_text
 
 
-def parse_code_suggestion(code_suggestions: dict, i: int = 0, gfm_supported: bool = True) -> str:
+def parse_code_suggestion(code_suggestion: dict, i: int = 0, gfm_supported: bool = True) -> str:
     """
     Convert a dictionary of data into markdown format.
 
     Args:
-        code_suggestions (dict): A dictionary containing data to be converted to markdown format.
+        code_suggestion (dict): A dictionary containing data to be converted to markdown format.
 
     Returns:
         str: A string containing the markdown formatted text generated from the input dictionary.
     """
     markdown_text = ""
-    if gfm_supported and 'relevant line' in code_suggestions:
-        if i == 0:
-            markdown_text += "<hr>"
+    if gfm_supported and 'relevant_line' in code_suggestion:
         markdown_text += '<table>'
-        for sub_key, sub_value in code_suggestions.items():
+        for sub_key, sub_value in code_suggestion.items():
             try:
-                if sub_key.lower() == 'relevant file':
+                if sub_key.lower() == 'relevant_file':
                     relevant_file = sub_value.strip('`').strip('"').strip("'")
-                    markdown_text += f"<tr><td>{sub_key}</td><td>{relevant_file}</td></tr>"
+                    markdown_text += f"<tr><td>relevant file</td><td>{relevant_file}</td></tr>"
                     # continue
                 elif sub_key.lower() == 'suggestion':
                     markdown_text += (f"<tr><td>{sub_key} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>"
-                                      f"<td><br>\n\n**{sub_value.strip()}**\n<br></td></tr>")
-                elif sub_key.lower() == 'relevant line':
+                                      f"<td>\n\n<strong>\n\n{sub_value.strip()}\n\n</strong>\n</td></tr>")
+                elif sub_key.lower() == 'relevant_line':
                     markdown_text += f"<tr><td>relevant line</td>"
                     sub_value_list = sub_value.split('](')
                     relevant_line = sub_value_list[0].lstrip('`').lstrip('[')
@@ -126,7 +122,7 @@ def parse_code_suggestion(code_suggestions: dict, i: int = 0, gfm_supported: boo
         markdown_text += '</table>'
         markdown_text += "<hr>"
     else:
-        for sub_key, sub_value in code_suggestions.items():
+        for sub_key, sub_value in code_suggestion.items():
             if isinstance(sub_value, dict):  # "code example"
                 markdown_text += f"  - **{sub_key}:**\n"
                 for code_key, code_value in sub_value.items():  # 'before' and 'after' code
@@ -134,12 +130,12 @@ def parse_code_suggestion(code_suggestions: dict, i: int = 0, gfm_supported: boo
                     code_str_indented = textwrap.indent(code_str, '        ')
                     markdown_text += f"    - **{code_key}:**\n{code_str_indented}\n"
             else:
-                if "relevant file" in sub_key.lower():
+                if "relevant_file" in sub_key.lower():
                     markdown_text += f"\n  - **{sub_key}:** {sub_value}  \n"
                 else:
                     markdown_text += f"   **{sub_key}:** {sub_value}  \n"
                 if not gfm_supported:
-                    if "relevant line" not in sub_key.lower():  # nicer presentation
+                    if "relevant_line" not in sub_key.lower():  # nicer presentation
                         # markdown_text = markdown_text.rstrip('\n') + "\\\n" # works for gitlab
                         markdown_text = markdown_text.rstrip('\n') + "   \n"  # works for gitlab and bitbucker
 
@@ -484,3 +480,75 @@ def replace_code_tags(text):
     for i in range(1, len(parts), 2):
         parts[i] = '<code>' + parts[i] + '</code>'
     return ''.join(parts)
+
+
+def find_line_number_of_relevant_line_in_file(diff_files: List[FilePatchInfo],
+                                              relevant_file: str,
+                                              relevant_line_in_file: str,
+                                              absolute_position: int = None) -> Tuple[int, int]:
+    position = -1
+    if absolute_position is None:
+        absolute_position = -1
+    re_hunk_header = re.compile(
+        r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@[ ]?(.*)")
+
+    for file in diff_files:
+        if file.filename and (file.filename.strip() == relevant_file):
+            patch = file.patch
+            patch_lines = patch.splitlines()
+            delta = 0
+            start1, size1, start2, size2 = 0, 0, 0, 0
+            if absolute_position != -1: # matching absolute to relative
+                for i, line in enumerate(patch_lines):
+                    # new hunk
+                    if line.startswith('@@'):
+                        delta = 0
+                        match = re_hunk_header.match(line)
+                        start1, size1, start2, size2 = map(int, match.groups()[:4])
+                    elif not line.startswith('-'):
+                        delta += 1
+
+                    #
+                    absolute_position_curr = start2 + delta - 1
+
+                    if absolute_position_curr == absolute_position:
+                        position = i
+                        break
+            else:
+                # try to find the line in the patch using difflib, with some margin of error
+                matches_difflib: list[str | Any] = difflib.get_close_matches(relevant_line_in_file,
+                                                                             patch_lines, n=3, cutoff=0.93)
+                if len(matches_difflib) == 1 and matches_difflib[0].startswith('+'):
+                    relevant_line_in_file = matches_difflib[0]
+
+
+                for i, line in enumerate(patch_lines):
+                    if line.startswith('@@'):
+                        delta = 0
+                        match = re_hunk_header.match(line)
+                        start1, size1, start2, size2 = map(int, match.groups()[:4])
+                    elif not line.startswith('-'):
+                        delta += 1
+
+                    if relevant_line_in_file in line and line[0] != '-':
+                        position = i
+                        absolute_position = start2 + delta - 1
+                        break
+
+                if position == -1 and relevant_line_in_file[0] == '+':
+                    no_plus_line = relevant_line_in_file[1:].lstrip()
+                    for i, line in enumerate(patch_lines):
+                        if line.startswith('@@'):
+                            delta = 0
+                            match = re_hunk_header.match(line)
+                            start1, size1, start2, size2 = map(int, match.groups()[:4])
+                        elif not line.startswith('-'):
+                            delta += 1
+
+                        if no_plus_line in line and line[0] != '-':
+                            # The model might add a '+' to the beginning of the relevant_line_in_file even if originally
+                            # it's a context line
+                            position = i
+                            absolute_position = start2 + delta - 1
+                            break
+    return position, absolute_position

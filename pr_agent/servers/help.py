@@ -48,7 +48,7 @@ Examples for extra instructions:
 ```
 [pr_reviewer] # /review #
 extra_instructions="""
-In the 'general suggestions' section, emphasize the following:
+In the 'possible issues' section, emphasize the following:
 - Does the code logic cover relevant edge cases?
 - Is the code logic clear and easy to understand?
 - Is the code logic efficient?
@@ -97,6 +97,31 @@ It is recommended to review the [possible options](https://github.com/Codium-ai/
 Some of the feature that are disabled by default are quite useful, and should be considered for enabling. For example: 
 `require_score_review`, `require_soc2_ticket`, and more.
 """
+        output += "\n\n</details></td></tr>\n\n"
+
+        output += "<tr><td><details> <summary><strong> Auto-approve PRs</strong></summary><hr>\n\n"
+        output += '''\
+By invoking:
+```
+/review auto_approve
+```
+The tool will automatically approve the PR, and add a comment with the approval.
+
+
+To ensure safety, the auto-approval feature is disabled by default. To enable auto-approval, you need to actively set in a pre-defined configuration file the following:
+```
+[pr_reviewer]
+enable_auto_approval = true
+```
+(this specific flag cannot be set with a command line argument, only in the configuration file, committed to the repository)
+
+
+You can also enable auto-approval only if the PR meets certain requirements, such as that the `estimated_review_effort` is equal or below a certain threshold, by adjusting the flag:
+```
+[pr_reviewer]
+maximal_review_effort = 5
+```
+'''
         output += "\n\n</details></td></tr>\n\n"
 
         # general
@@ -186,6 +211,7 @@ To enable inline file summary, set `pr_description.inline_file_summary` in the c
 - `true`: A collapsable file comment with changes title and a changes summary for each file in the PR.
 - `false` (default): File changes walkthrough will be added only to the "Conversation" tab.
 """
+
         # extra instructions
         output += "<tr><td><details> <summary><strong> Utilizing extra instructions</strong></summary><hr>\n\n"
         output += '''\
