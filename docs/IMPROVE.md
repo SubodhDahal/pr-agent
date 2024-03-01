@@ -3,7 +3,6 @@
 ## Table of Contents
 - [Overview](#overview)
   - [Configuration options](#configuration-options)
-  - [Summarize mode](#summarize-mode)
 - [Usage Tips](#usage-tips)
     - [Extra instructions](#extra-instructions)
     - [PR footprint - regular vs summarize mode](#pr-footprint---regular-vs-summarize-mode)
@@ -16,7 +15,7 @@ The tool can be triggered automatically every time a new PR is [opened](https://
 /improve
 ```
 
-### Summarized vs commitable code suggestions
+### Summarized vs committable code suggestions
 
 The code suggestions can be presented as a single comment (via `pr_code_suggestions.summarize=true`):
 ___
@@ -85,6 +84,6 @@ Use triple quotes to write multi-line instructions. Use bullet points to make th
 
 - While the current AI for code is getting better and better (GPT-4), it's not flawless. Not all the suggestions will be perfect, and a user should not accept all of them automatically.
 - Suggestions are not meant to be [simplistic](./../pr_agent/settings/pr_code_suggestions_prompts.toml#L34). Instead, they aim to give deep feedback and raise questions, ideas and thoughts to the user, who can then use his judgment, experience, and understanding of the code base.
-- Recommended to use the 'extra_instructions' field to guide the model to suggestions that are more relevant to the specific needs of the project.
-- Best quality will be obtained by using 'improve --extended' mode.
+- Recommended to use the `exra_instructions` field to guide the model to suggestions that are more relevant to the specific needs of the project.
+- Consider also trying the [Custom Suggestions Tool](https://github.com/Codium-ai/pr-agent/blob/main/docs/CUSTOM_SUGGESTIONS.md) 💎, that will **only** propose suggestions that follow specific guidelines defined by user.
 

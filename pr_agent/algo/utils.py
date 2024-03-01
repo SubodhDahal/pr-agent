@@ -49,8 +49,9 @@ def convert_to_markdown(output_data: dict, gfm_supported: bool=True) -> str:
     }
     markdown_text = ""
     markdown_text += f"## PR Review\n\n"
-    markdown_text += "<table>\n<tr>\n"
-    markdown_text += """<td> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>PR&nbsp;feedback</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </td> <td></td></tr>"""
+    if gfm_supported:
+        markdown_text += "<table>\n<tr>\n"
+        # markdown_text += """<td> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Feedback&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td> <td></td></tr>"""
 
     if not output_data or not output_data.get('review', {}):
         return ""
@@ -60,16 +61,41 @@ def convert_to_markdown(output_data: dict, gfm_supported: bool=True) -> str:
             continue
         key_nice = key.replace('_', ' ').capitalize()
         emoji = emojis.get(key_nice, "")
-        markdown_text += f"<tr><td> {emoji} {key_nice}</td><td>\n\n{value}\n\n</td></tr>\n"
-    markdown_text += "</table>\n"
+        if gfm_supported:
+            if 'Estimated effort to review' in key_nice:
+                key_nice = 'Estimated&nbsp;effort&nbsp;to&nbsp;review [1-5]'
+            if 'possible issues' in key_nice.lower():
+                value = value.strip()
+                issues = value.split('\n- ')
+                number_of_issues = len(issues)
+                if number_of_issues > 1:
+                    markdown_text += f"<tr><td rowspan={number_of_issues}> {emoji}&nbsp;<strong>{key_nice}</strong></td>\n"
+                    for i, issue in enumerate(issues):
+                        issue = issue.strip('-').strip()
+                        if i == 0:
+                            markdown_text += f"<td>\n\n{issue}</td></tr>\n"
+                        else:
+                            markdown_text += f"<tr>\n<td>\n\n{issue}</td></tr>\n"
+                else:
+                    value = value.strip('-').strip()
+                    markdown_text += f"<tr><td> {emoji}&nbsp;<strong>{key_nice}</strong></td><td>\n\n{value}\n\n</td></tr>\n"
+            else:
+                markdown_text += f"<tr><td> {emoji}&nbsp;<strong>{key_nice}</strong></td><td>\n\n{value}\n\n</td></tr>\n"
+        else:
+            if len(value.split()) > 1:
+                markdown_text += f"{emoji} **{key_nice}:**\n\n {value}\n\n"
+            else:
+                markdown_text += f"{emoji} **{key_nice}:** {value}\n\n"
+    if gfm_supported:
+        markdown_text += "</table>\n"
 
     if 'code_feedback' in output_data:
         if gfm_supported:
             markdown_text += f"\n\n"
             markdown_text += f"<details><summary> <strong>Code feedback:</strong></summary>\n\n"
+            markdown_text += "<hr>"
         else:
             markdown_text += f"\n\n** Code feedback:**\n\n"
-        markdown_text += "<hr>"
         for i, value in enumerate(output_data['code_feedback']):
             if value is None or value == '' or value == {} or value == []:
                 continue
@@ -123,6 +149,10 @@ def parse_code_suggestion(code_suggestion: dict, i: int = 0, gfm_supported: bool
         markdown_text += "<hr>"
     else:
         for sub_key, sub_value in code_suggestion.items():
+            if isinstance(sub_key, str):
+                sub_key = sub_key.rstrip()
+            if isinstance(sub_value,str):
+                sub_value = sub_value.rstrip()
             if isinstance(sub_value, dict):  # "code example"
                 markdown_text += f"  - **{sub_key}:**\n"
                 for code_key, code_value in sub_value.items():  # 'before' and 'after' code
@@ -134,10 +164,9 @@ def parse_code_suggestion(code_suggestion: dict, i: int = 0, gfm_supported: bool
                     markdown_text += f"\n  - **{sub_key}:** {sub_value}  \n"
                 else:
                     markdown_text += f"   **{sub_key}:** {sub_value}  \n"
-                if not gfm_supported:
-                    if "relevant_line" not in sub_key.lower():  # nicer presentation
-                        # markdown_text = markdown_text.rstrip('\n') + "\\\n" # works for gitlab
-                        markdown_text = markdown_text.rstrip('\n') + "   \n"  # works for gitlab and bitbucker
+                if "relevant_line" not in sub_key.lower():  # nicer presentation
+                    # markdown_text = markdown_text.rstrip('\n') + "\\\n" # works for gitlab
+                    markdown_text = markdown_text.rstrip('\n') + "   \n"  # works for gitlab and bitbucker
 
         markdown_text += "\n"
     return markdown_text
@@ -361,9 +390,9 @@ def try_fix_yaml(response_text: str, keys_fix_yaml: List[str] = []) -> dict:
             pass
 
      # third fallback - try to remove leading and trailing curly brackets
-    response_text_copy = response_text.strip().rstrip().removeprefix('{').removesuffix('}')
+    response_text_copy = response_text.strip().rstrip().removeprefix('{').removesuffix('}').rstrip(':\n')
     try:
-        data = yaml.safe_load(response_text_copy,)
+        data = yaml.safe_load(response_text_copy)
         get_logger().info(f"Successfully parsed AI prediction after removing curly brackets")
         return data
     except:
@@ -374,7 +403,7 @@ def try_fix_yaml(response_text: str, keys_fix_yaml: List[str] = []) -> dict:
     for i in range(1, len(response_text_lines)):
         response_text_lines_tmp = '\n'.join(response_text_lines[:-i])
         try:
-            data = yaml.safe_load(response_text_lines_tmp,)
+            data = yaml.safe_load(response_text_lines_tmp)
             get_logger().info(f"Successfully parsed AI prediction after removing {i} lines")
             return data
         except:
@@ -422,7 +451,7 @@ def get_user_labels(current_labels: List[str] = None):
                     continue
             user_labels.append(label)
         if user_labels:
-            get_logger().info(f"Keeping user labels: {user_labels}")
+            get_logger().debug(f"Keeping user labels: {user_labels}")
     except Exception as e:
         get_logger().exception(f"Failed to get user labels: {e}")
         return current_labels
